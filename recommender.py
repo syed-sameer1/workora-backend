@@ -1,8 +1,19 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from models import Job
+from math import ceil
 
-def recommend_jobs_from_db(user, db):
+
+def recommend_jobs_from_db(
+    user,
+    db,
+    page,
+    limit,
+    min_salary=None,
+    max_salary=None,
+    experience=None,
+    skills=None
+):
     jobs = db.query(Job).all()
 
     job_skills = [job.skills.replace(",", " ") for job in jobs]
@@ -13,21 +24,50 @@ def recommend_jobs_from_db(user, db):
 
     similarity_scores = cosine_similarity(vectors[0:1], vectors[1:])[0]
 
-    results = []
+    filter_skills = skills.split(",") if skills else []
+
+    filtered = []
+
     for i, score in enumerate(similarity_scores):
-        if (
-            score > 0.4
-            and jobs[i].experience <= user.experience
-            and jobs[i].education.lower() in user.education.lower()
-        ):
-            results.append({
-                "title": jobs[i].title,
-                "skills": jobs[i].skills,
-                "experience": jobs[i].experience,
-                "education": jobs[i].education,
-                "score": round(score, 2)
-            })
+        job = jobs[i]
 
-    results.sort(key=lambda x: x["score"], reverse=True)
+        if score < 0.25:
+            continue
 
-    return results
+        if experience is not None and job.experience > experience:
+            continue
+
+        if min_salary is not None and job.salary < min_salary:
+            continue
+
+        if max_salary is not None and job.salary > max_salary:
+            continue
+
+        if filter_skills:
+            if not set(filter_skills).intersection(job.skills.split(",")):
+                continue
+
+        filtered.append({
+            "id": job.id,
+            "title": job.title,
+            "skills": job.skills.split(","),
+            "education": job.education,
+            "experience": job.experience,
+            "description": job.description,
+            "salary": job.salary,
+            "score": round(score, 2)
+        })
+
+    total = len(filtered)
+    start = (page - 1) * limit
+    end = start + limit
+
+    return {
+        "data": filtered[start:end],
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": ceil(total / limit)
+        }
+    }

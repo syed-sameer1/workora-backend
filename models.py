@@ -22,3 +22,4 @@ class Job(Base):
     education = Column(String)   # BS / MS
     experience = Column(Integer)
     description = Column(Text)
+    salary = Column(Integer, nullable=False)

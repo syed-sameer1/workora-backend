@@ -45,6 +45,16 @@ descriptions = [
     "Troubleshoot and debug production issues."
 ]
 
+salaries = [
+    50000,
+    80000,
+    15000,
+    30000,
+    100000,
+    110000,
+    60000
+]
+
 def seed_unique_jobs(total_jobs=550):
     jobs = []
     used_titles = set()
@@ -64,13 +74,15 @@ def seed_unique_jobs(total_jobs=550):
         education = random.choice(educations)
         experience = random.randint(0, 8)
         description = random.choice(descriptions)
+        salary = random.choice(salaries)
 
         job = Job(
             title=unique_title,
             skills=skills,
             education=education,
             experience=experience,
-            description=description
+            description=description,
+            salary=salary
         )
 
         jobs.append(job)

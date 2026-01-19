@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import Query
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from models import User
@@ -8,6 +9,8 @@ from recommender import recommend_jobs_from_db
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from typing import Optional
+from math import ceil
 
 Base.metadata.create_all(bind=engine)
 
@@ -72,13 +75,6 @@ def login(data: LoginSchema, db: Session = Depends(get_db)):
     }
 
 
-# ✅ Dashboard (Recommended Jobs)
-@app.get("/dashboard/{user_id}")
-def dashboard(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).get(user_id)
-    return recommend_jobs_from_db(user, db)
-
-
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
@@ -105,6 +101,31 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+# ✅ Dashboard (Recommended Jobs)
+@app.get("/dashboard")
+def dashboard(
+    page: int = Query(1, ge=1),
+    limit: int = Query(6, ge=1, le=50),
+    min_salary: int | None = None,
+    max_salary: int | None = None,
+    experience: int | None = None,
+    skills: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return recommend_jobs_from_db(
+        current_user,
+        db,
+        page,
+        limit,
+        min_salary,
+        max_salary,
+        experience,
+        skills
+    )
+
 
 # ✅ Edit Profile
 @app.put("/edit-profile")
